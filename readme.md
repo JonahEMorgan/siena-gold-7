@@ -1,0 +1,3 @@
+## Siena 2023 programming contest: Gold #7
+
+This is a challenging problem which I used breadth-first search to solve. The board state is store using bitboard techniques as a 32-bit integer. This allows fast operations and give me the ability to precompute every move as a sequence of numbers. `generate.py` is used to precompute the move table and has a flag for normal output or "triangle" output. The "triangle" formatted table is used in `triangle.c` which looks like a triangle. `triangle.c` is the same as both `main.c` and `obfuscated.c`, but I formatted it uniquely to suit the challenge.
