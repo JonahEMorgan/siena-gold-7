@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
+
+#define SPEED_TEST 10000
 
 typedef int32_t board;
 
@@ -25,68 +28,69 @@ typedef struct queue {
     struct queue* next;
 } queue;
 
-move moves[] = {
-    {0xb, 0x3, 1, 4},
-    {0xb, 0xa, 4, 1},
-    {0x25, 0x5, 1, 6},
-    {0x4a, 0xa, 2, 7},
-    {0x25, 0x24, 6, 1},
-    {0x38, 0x18, 4, 6},
-    {0x38, 0x30, 6, 4},
-    {0x4a, 0x48, 7, 2},
-    {0x94, 0x14, 3, 8},
-    {0x94, 0x90, 8, 3},
-    {0x112, 0x12, 2, 9},
-    {0x1c0, 0xc0, 7, 9},
-    {0x112, 0x110, 9, 2},
-    {0x1c0, 0x180, 9, 7},
-    {0x224, 0x24, 3, 10},
-    {0x448, 0x48, 4, 11},
-    {0x890, 0x90, 5, 12},
-    {0x224, 0x220, 10, 3},
-    {0x380, 0x180, 8, 10},
-    {0x380, 0x300, 10, 8},
-    {0x448, 0x440, 11, 4},
-    {0x890, 0x880, 12, 5},
-    {0x1088, 0x88, 4, 13},
-    {0x1120, 0x120, 6, 13},
-    {0x2110, 0x110, 5, 14},
-    {0x4220, 0x220, 6, 15},
-    {0x8440, 0x440, 7, 16},
-    {0x1088, 0x1080, 13, 4},
-    {0x1120, 0x1100, 13, 6},
-    {0x1c00, 0xc00, 11, 13},
-    {0x2110, 0x2100, 14, 5},
-    {0x4220, 0x4200, 15, 6},
-    {0x8440, 0x8400, 16, 7},
-    {0x10880, 0x880, 8, 17},
-    {0x20840, 0x840, 7, 18},
-    {0x1c00, 0x1800, 13, 11},
-    {0x3800, 0x1800, 12, 14},
-    {0x3800, 0x3000, 14, 12},
-    {0x7000, 0x3000, 13, 15},
-    {0x7000, 0x6000, 15, 13},
-    {0x21100, 0x1100, 9, 18},
-    {0x41080, 0x1080, 8, 19},
-    {0x82100, 0x2100, 9, 20},
-    {0x10880, 0x10800, 17, 8},
-    {0x20840, 0x20800, 18, 7},
-    {0x21100, 0x21000, 18, 9},
-    {0x41080, 0x41000, 19, 8},
-    {0x42200, 0x2200, 10, 19},
-    {0x82100, 0x82000, 20, 9},
-    {0x38000, 0x18000, 16, 18},
-    {0x38000, 0x30000, 18, 16},
-    {0x42200, 0x42000, 19, 10},
-    {0x70000, 0x30000, 17, 19},
-    {0x70000, 0x60000, 19, 17},
-    {0xe0000, 0x60000, 18, 20},
-    {0xe0000, 0xc0000, 20, 18},
-    {0x104200, 0x4200, 10, 21},
-    {0x1c0000, 0xc0000, 19, 21},
-    {0x104200, 0x104000, 21, 10},
-    {0x1c0000, 0x180000, 21, 19},
+position positions[] = {
+    3,  5,
+    6,  8,
+    7,  9,
+    10, 12,
+    11, 13,
+    12, 14,
+    15, 17,
+    16, 18,
+    17, 19,
+    18, 20,
+    6,  17,
+    3,  12,
+    7,  18,
+    1,  8,
+    4,  13,
+    8,  19,
+    0,  5,
+    2,  9,
+    5,  14,
+    9,  20,
+    9,  18,
+    5,  12,
+    8,  17,
+    2,  7,
+    4,  11,
+    7,  16,
+    0,  3,
+    1,  6,
+    3,  10,
+    6,  1
 };
+
+const int totalMoves = 60;
+
+move moves[totalMoves];
+
+move makeMove(position from, position to) {
+    position over = (from + to) / 2;
+    return (move) {
+        1 << from | 1 << over | 1 << to,
+        1 << from | 1 << over,
+        from + 1,
+        to + 1
+    };
+}
+
+void constructMoves() {
+    for(int i = 0; i < totalMoves / 2; i++) {
+        moves[i * 2] = makeMove(positions[i * 2], positions[i * 2 + 1]);
+        moves[i * 2 + 1] = makeMove(positions[i * 2 + 1], positions[i * 2]);
+    }
+    for(int i = 0; i < totalMoves; i++) {
+        for(int j = 0; j < totalMoves; j++) {
+            move a = moves[i];
+            move b = moves[j];
+            if(a.from < b.from) {
+                moves[i] = b;
+                moves[j] = a;
+            }
+        }
+    }
+}
 
 bool hasMove(board b, move m) {
     return (b & m.mask) == m.move;
@@ -151,7 +155,7 @@ state* findSolution(board b) {
             back = NULL;
         }
         bool anyMove = false;
-        for(int i = 0; i < sizeof(moves) / sizeof(moves[0]); i++) {
+        for(int i = 0; i < totalMoves; i++) {
             move* m = &moves[i];
             if(hasMove(q->s.b, *m)) {
                 anyMove = true;
@@ -194,11 +198,22 @@ int main(int argc, char** argv) {
         puts("Specify input file");
         return -1;
     }
+    constructMoves();
     FILE* file = fopen(argv[1], "r");
     board b = readBoard(file);
     puts("Input state:");
     printBoard(b);
-    state* s = findSolution(b);
+    #ifdef SPEED_TEST
+        clock_t start = clock();
+        state* s;
+        for(int i = 0; i < SPEED_TEST; i++) {
+            s = findSolution(b);
+        }
+        float seconds = (float) (clock() - start) / CLOCKS_PER_SEC;
+        printf("Solution found in %.3f milliseconds!\n", seconds * 1000 / SPEED_TEST);
+    #else
+        state* s = findSolution(b);
+    #endif
     puts("Final state:");
     printBoard(s->b);
     int count = printState(s, 0);
